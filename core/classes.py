@@ -42,7 +42,7 @@ class Ransac(object):
   def _setVariables(self, data, side):
     self.data = self._pythonlist2C2dArray(data)
     self.n = self._INT(len(data))
-    self.maxT = self._INT(100)
+    self.maxT = self._INT(50)
     self.threshold = self._FLOAT(0.275)
     self.model = (self._FLOAT * 3)(0.0,0.0,0.0)
     self.inliers = self._INT(0)

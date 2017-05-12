@@ -43,9 +43,8 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
         if(bestconSet[i] == NULL) { perror("out of memory\n"); exit(0); }
     }
 
-
-
     srand((unsigned)time(NULL)); // set rand seed
+
 
     while(maxT > Tcount)
     {
@@ -98,20 +97,22 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
         float angCoeff = -randModel[0]/randModel[1];
         if(side == 0)
         {
-            bias = 1.0 + 0.50*exp(- pow((angCoeff+0.050)/(0.125),2.0));
+            bias = 1.0 + 0.30*exp(- pow((angCoeff+0.050)/(0.125),2.0));
         }
         else
         {
-            bias = 1.0 + 0.50*exp(- pow((angCoeff-0.050)/(0.125),2.0));
+            bias = 1.0 + 0.30*exp(- pow((angCoeff-0.050)/(0.125),2.0));
         }
 
         if(score*(1.0/bias) < bestScore)
+        //if(score < bestScore)
         {
             if(verbose)
                 printf(" >> IT'S THE BEST MODEL !!! <<\n");
 
             estimateModel_line(bestModel, conSet, inliers);
             bestScore = score*(1.0/bias);
+            //bestScore = score;
             for(i = 0; i < inliers; i++){
                 bestconSet[i][0] = conSet[i][0];
                 bestconSet[i][1] = conSet[i][1];
@@ -130,6 +131,7 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
         Tcount++;
         if(Tcount > maxT) { break; }
     }
+
 
     for(i = 0; i < *bestInliers; i++){
         data[i][0] = bestconSet[i][0];
@@ -161,8 +163,8 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
     return(0);
 }
 
-int randomSelect(float **sel, int nsel, float **data, int ndata) {
-
+int randomSelect(float **sel, int nsel, float **data, int ndata)
+{
     int r = 0;
     int k = ndata;
     int i;
@@ -194,12 +196,8 @@ int randomSelect(float **sel, int nsel, float **data, int ndata) {
     return 0;
 }
 
-int fitModel_line(float *point, float *model, float &error, float threshold) {
-    // Estimate distance between point and model
-    // d = abs(a*x + b*y + c)/sqrt(a^2 + b^2)
-
-    //float d=0;
-
+int fitModel_line(float *point, float *model, float &error, float threshold)
+{
     error = fabs(model[0]*point[0] + model[1]*point[1] + model[2])/sqrt(pow(model[0], 2) + pow(model[1], 2));
 
     if(error<=threshold)
@@ -208,7 +206,8 @@ int fitModel_line(float *point, float *model, float &error, float threshold) {
         return 0;
 }
 
-void estimateModel_line(float *l, float **P, int n) {
+void estimateModel_line(float *l, float **P, int n)
+{
     if(n<=2) {
         perror("Need at least tree points\n");
         l[0] = 0;
@@ -249,7 +248,8 @@ void estimateModel_line(float *l, float **P, int n) {
     }
 }
 
-void twoPointsLine(float *l, float **P){
+void twoPointsLine(float *l, float **P)
+{
     l[0] = 1;
     l[1] = -((P[0][0]-P[1][0])/(P[0][1]-P[1][1]));
     l[2] = -P[0][0] -l[1]*P[0][1];
