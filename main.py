@@ -18,23 +18,26 @@ elif len(sys.argv) == 1:
 else:
   raise Exception(" Too many parameters...")
 
+NumberIterations = 50
+
 rtp = RealTimePlot(
                     num_point_type=5
                    ,num_line_type=4
                    ,num_dash_type=1
                    ,save_images=save
-                   ,dir_name= 'png/' + str(int(time.time()))
+                   ,nIterations=NumberIterations
+                   ,dir_name= 'png/' + time.strftime("%Y_%m_%d_%H_%M_%S")
                   )
 
-method = { 'name':'ols'
-          ,'L':Ols()
-          ,'R':Ols()
-         }
-
 #method = { 'name':'ols'
-#          ,'L':Ransac()
-#          ,'R':Ransac()
+#          ,'L':Ols()
+#          ,'R':Ols()
 #         }
+
+method = { 'name':'ransac'
+          ,'L':Ransac()
+          ,'R':Ransac()
+         }
 
 hp = HandlePts()
 
@@ -50,6 +53,8 @@ P = numpy.matrix([[1e4,0],[0,1e4]])
 
 X = []
 Time = []
+EstimationTotalTime = 0.0
+
 
 time_ = 1310046785
 #time_ = 1310046820
@@ -70,9 +75,10 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
       angle += msg.angle_increment
 
 
+  current_time = time.time()
   method['L'].run(data['L'], 0)
   method['R'].run(data['R'], 1)
-
+  EstimationTotalTime += time.time() - current_time
 
   model = utils.computeBisectrix(method['L'].model,method['R'].model)
   z = numpy.matrix(utils.fromThree2Two(model)).T
@@ -97,43 +103,42 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
   rtp.update()
 
 
-  if count > 500: break
-  #else: print 'count: {}'.format(count)
-  #raw_input('press enter...')
+  if count > NumberIterations:
+    #utils.csv2( # To use in Vero kinematic simulator
+    #              filename='bisectrix'
+    #            , fieldnames=['t','ang_coeff','lin_coeff']
+    #            , dataframe=[(a,)+tuple(b) for  a,b in zip(Time,X)]
+    #           )
+    print "Simulation elapsed time: ", EstimationTotalTime/(NumberIterations)
+    rtp.close()
+    break
 
-  #if count%50 == 0:
+  else: print 'count: {}'.format(count)
+    #if count%50 == 0:
 
-  #  utils.printLatex(
-  #                    'cloud_'
-  #                   ,str(count)
-  #                   ,numpy.array(utils.fromThree2Two(ransac['L'].model))
-  #                   ,numpy.array(utils.fromThree2Two(ransac['R'].model))
-  #                   ,numpy.squeeze(numpy.asarray(x))
-  #                   ,numpy.squeeze(numpy.asarray(z))
-  #                  )
+    #  utils.printLatex(
+    #                    'cloud_'
+    #                   ,str(count)
+    #                   ,numpy.array(utils.fromThree2Two(ransac['L'].model))
+    #                   ,numpy.array(utils.fromThree2Two(ransac['R'].model))
+    #                   ,numpy.squeeze(numpy.asarray(x))
+    #                   ,numpy.squeeze(numpy.asarray(z))
+    #                  )
 
-  #  utils.csv2(
-  #              filename='cloud_'+str(count)
-  #             ,fieldnames=['x','y']
-  #             ,dataframe=data['L']+data['R']
-  #            )
+    #  utils.csv2(
+    #              filename='cloud_'+str(count)
+    #             ,fieldnames=['x','y']
+    #             ,dataframe=data['L']+data['R']
+    #            )
 
-  #  utils.csv2(
-  #              filename='cloudall_'+str(count)
-  #             ,fieldnames=['x','y']
-  #             ,dataframe=data['ALL']
-  #            )
+    #  utils.csv2(
+    #              filename='cloudall_'+str(count)
+    #             ,fieldnames=['x','y']
+    #             ,dataframe=data['ALL']
+    #            )
 
-  #  utils.csv2(
-  #              filename='cloudinliers_'+str(count)
-  #             ,fieldnames=['x','y']
-  #             ,dataframe=ransac['L'].getInliers()+ransac['R'].getInliers()
-  #            )
-
-rtp.close()
-
-#utils.csv2( # To use in Vero kinematic simulator
-#              filename='bisectrix'
-#            , fieldnames=['t','ang_coeff','lin_coeff']
-#            , dataframe=[(a,)+tuple(b) for  a,b in zip(Time,X)]
-#           )
+    #  utils.csv2(
+    #              filename='cloudinliers_'+str(count)
+    #             ,fieldnames=['x','y']
+    #             ,dataframe=ransac['L'].getInliers()+ransac['R'].getInliers()
+    #            )

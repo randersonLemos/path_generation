@@ -89,7 +89,7 @@ class Ransac(object):
     self.data = self._pythonlist2C2dArray(data)
     self.n = self._INT(len(data))
     self.maxT = self._INT(50)
-    self.threshold = self._FLOAT(0.275)
+    self.threshold = self._FLOAT(0.350)
     self.model = (self._FLOAT * 3)(0.0,0.0,0.0)
     self.inliers = self._INT(0)
     self.side = self._INT(side)
@@ -166,12 +166,13 @@ class Kalman:
 
 
 class RealTimePlot(object):
-  def __init__(self, num_point_type, num_line_type, num_dash_type, save_images, dir_name):
+  def __init__(self, num_point_type, num_line_type, num_dash_type, save_images, nIterations, dir_name):
     self._num_point_type = num_point_type
     self._num_line_type = num_line_type
     self._num_dash_type = num_dash_type
     self._save_images = save_images
 
+    self._nIterations = nIterations
     self._directory = dir_name 
     self._fig = plt.figure()
     self._count_fig = 0
@@ -217,7 +218,7 @@ class RealTimePlot(object):
         os.makedirs(self._directory)
       self._fig.savefig(self._directory+'/{:05}.png'.format(self._count_fig), bbox_inches='tight')
       self._count_fig += 1
-      if self._count_fig > 4500:
+      if self._count_fig > self._nIterations:
         tmp = os.path.abspath(self._directory)
         shutil.move(tmp, tmp + '_complete')
     else:
