@@ -7,6 +7,52 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
 
+class Ols(object):
+  def __init__(self):
+    self._INT   = ctypes.c_int
+    self._PINT  = ctypes.POINTER(self._INT)
+    self._PPINT = ctypes.POINTER(self._PINT)
+    self._FLOAT   = ctypes.c_float
+    self._PFLOAT  = ctypes.POINTER(self._FLOAT)
+    self._PPFLOAT = ctypes.POINTER(self._PFLOAT)
+    self._DOUBLE = ctypes.c_double
+    self._PDOUBLE  = ctypes.POINTER(self._DOUBLE)
+    self._PPDOUBLE = ctypes.POINTER(self._PDOUBLE)
+
+    self.data = None
+    self.n = None
+    self.model = None
+
+    self._libols = ctypes.CDLL('./cpp/ols/libols.so')
+    self._ols_2Dline = getattr(self._libols, 'ols_2Dline')
+
+  def _pythonlist2C2dArray(self, data):
+    parr = (self._PDOUBLE * len(data))() # pointer array type
+    for i in range(len(data)):
+      parr[i] = (self._DOUBLE*2)()
+      for j in range(2):
+        parr[i][j] = data[i][j]
+    return parr
+
+  def _setVariables(self, data,):
+    self.data = self._pythonlist2C2dArray(data)
+    self.n = self._INT(len(data))
+    self.model = (self._DOUBLE * 3)(0.0,0.0,0.0)
+
+  def run(self, data, _):
+    self._setVariables(data)
+    self._ols_2Dline( self.data
+                     ,self.n
+                     ,self.model
+                    )
+
+  def getInliers(self):
+    tmp = []
+    for i in range(self.n.value):
+     tmp.append((self.data[i][0],self.data[i][1]))
+    return tmp
+
+
 class Ransac(object):
   def __init__(self):
     self._INT   = ctypes.c_int
@@ -26,7 +72,7 @@ class Ransac(object):
     self.side = None
     self.verbose = None
 
-    self._libransac = ctypes.CDLL('./cpp/libransac.so')
+    self._libransac = ctypes.CDLL('./cpp/ransac/libransac.so')
     self._ransac_2Dline = getattr(self._libransac, 'ransac_2Dline')
 
   def _pythonlist2C2dArray(self, data):
@@ -66,6 +112,7 @@ class Ransac(object):
     for i in range(self.inliers.value):
      tmp.append((self.data[i][0],self.data[i][1]))
     return tmp
+
 
 class HandlePts(object):
   def bisectrixFrame(self, pt, model):

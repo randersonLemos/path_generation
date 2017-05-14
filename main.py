@@ -6,7 +6,7 @@ import numpy
 import rosbag
 import warnings
 import core.utils as utils
-from core.classes import Ransac, HandlePts, Kalman, RealTimePlot
+from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, Ols
 
 if len(sys.argv) == 2:
   if not sys.argv[1] in ('True', 'False'):
@@ -26,10 +26,15 @@ rtp = RealTimePlot(
                    ,dir_name= 'png/' + str(int(time.time()))
                   )
 
-ransac = {
-           'L':Ransac()
-          ,'R':Ransac()
+method = { 'name':'ols'
+          ,'L':Ols()
+          ,'R':Ols()
          }
+
+#method = { 'name':'ols'
+#          ,'L':Ransac()
+#          ,'R':Ransac()
+#         }
 
 hp = HandlePts()
 
@@ -65,27 +70,26 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
       angle += msg.angle_increment
 
 
-  ransac['L'].run(data['L'], 0)
-  ransac['R'].run(data['R'], 1)
-  #ransac['L'].run(data['L'])
-  #ransac['R'].run(data['R'])
+  method['L'].run(data['L'], 0)
+  method['R'].run(data['R'], 1)
 
-  model = utils.computeBisectrix(ransac['L'].model,ransac['R'].model)
+
+  model = utils.computeBisectrix(method['L'].model,method['R'].model)
   z = numpy.matrix(utils.fromThree2Two(model)).T
   x, P = kalman.step(x,P,z)
   X.append(numpy.squeeze(numpy.asarray(x)))
 
 
   # Visualization
-  rtp.plotPoint(*zip(*data['ALL']),index=0)
+  #rtp.plotPoint(*zip(*data['ALL']),index=0)
   rtp.plotPoint(*zip(*data['L']),index=1)
   rtp.plotPoint(*zip(*data['R']),index=2)
-  rtp.plotPoint(*zip(*ransac['L'].getInliers()),index=3)
-  rtp.plotPoint(*zip(*ransac['R'].getInliers()),index=4)
+  rtp.plotPoint(*zip(*method['L'].getInliers()),index=3)
+  rtp.plotPoint(*zip(*method['R'].getInliers()),index=4)
 
-  rtp.plotLine(*zip(*utils.pointsFromModel(ransac['L'].model)), index=0)
-  rtp.plotLine(*zip(*utils.pointsFromModel(ransac['R'].model)), index=1)
-  #rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
+  rtp.plotLine(*zip(*utils.pointsFromModel(method['L'].model)), index=0)
+  rtp.plotLine(*zip(*utils.pointsFromModel(method['R'].model)), index=1)
+  rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
   rtp.plotLine(*zip(*utils.pointsFromModel(x)), index=3)
 
   #rtp.plotDash(*zip(*utils.pointsFromModel(xpre)), index=0)
@@ -93,8 +97,8 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
   rtp.update()
 
 
-  if count > 4500: break
-  else: print 'count: {}'.format(count)
+  if count > 500: break
+  #else: print 'count: {}'.format(count)
   #raw_input('press enter...')
 
   #if count%50 == 0:
