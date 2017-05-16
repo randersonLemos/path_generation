@@ -85,29 +85,40 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
             }
             else
             {
-                //score += threshold;
-                score += error;
+                score += threshold;
+                //score += error;
             }
         }
 
         if(verbose)
             printf(" inliers = %d\n", inliers);
 
-        float bias = 0;
-        float angCoeff = -randModel[0]/randModel[1];
+        float bias = 1.0;
+        float linCoeff = -randModel[2]/(randModel[1]+1e-6);
+        //printf("linCoeffs: %f | ", linCoeff);
+        float angCoeff = -randModel[0]/(randModel[1]+1e-6);
+        //printf("angCoeffs: %f | ", angCoeff);
         if(side == 0)
         {
-            bias = 1.0 + 0.30*exp(- pow((angCoeff+0.050)/(0.125),2.0));
+            bias  = 1.00 + 1.00*exp(-pow((linCoeff-1.300)/(1.500),6.0));
+            //printf("1 bias: %f | ", bias);
+            bias *= (1.00 + 0.75*exp(- pow((angCoeff+0.055)/(0.070),2.0)));
+            //printf("2 bias: %f\n", bias);
         }
         else
         {
-            bias = 1.0 + 0.30*exp(- pow((angCoeff-0.050)/(0.125),2.0));
+            bias  = 1.00 + 5.00*exp(-pow((linCoeff+1.300)/(1.500),6.0));
+            //printf("1 bias: %f | ", bias);
+            bias *= (1.00 + 0.75*exp(- pow((angCoeff-0.055)/(0.070),2.0)));
+            //printf("2 bias: %f\n", bias);
         }
 
         if(score*(1.0/bias) < bestScore)
         //if(score < bestScore)
         {
-            if(verbose)
+           //printf("1 score: %f\n", score);
+           //printf("2 score: %f\n", score*(1.0/bias));
+           if(verbose)
                 printf(" >> IT'S THE BEST MODEL !!! <<\n");
 
             estimateModel_line(bestModel, conSet, inliers);

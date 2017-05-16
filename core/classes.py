@@ -1,4 +1,5 @@
 import os
+import time
 import math
 import numpy
 import shutil
@@ -88,8 +89,8 @@ class Ransac(object):
   def _setVariables(self, data, side):
     self.data = self._pythonlist2C2dArray(data)
     self.n = self._INT(len(data))
-    self.maxT = self._INT(50)
-    self.threshold = self._FLOAT(0.350)
+    self.maxT = self._INT(100)
+    self.threshold = self._FLOAT(0.500)
     self.model = (self._FLOAT * 3)(0.0,0.0,0.0)
     self.inliers = self._INT(0)
     self.side = self._INT(side)
@@ -132,13 +133,13 @@ class HandlePts(object):
     key = False
     #ptb = self.bisectrixFrame(pt, model)
     ptb = pt
-    if ptb[0] <= 5.0 and ptb[0] >= -1.0:
-    #if ptb[0] <= 8.5 and ptb[0] >= 0.0:
-      if ptb[1] >= 0.0 and ptb[1] <= 2.1:
-      #if ptb[1] >= 0.0:
+    #if ptb[0] <= 5.0 and ptb[0] >= -1.0:
+    if ptb[0] <= 15.0 and ptb[0] >= -10.0:
+      #if ptb[1] >= 0.0 and ptb[1] <= 2.1:
+      if ptb[1] >= 0.0:
         key = 'L'
-      elif ptb[1] <= 0.0 and ptb[1] >= -2.1:
-      #elif ptb[1] <= 0.0:
+      #elif ptb[1] <= 0.0 and ptb[1] >= -2.1:
+      elif ptb[1] <= 0.0:
         key = 'R'
     return key
 
@@ -221,6 +222,7 @@ class RealTimePlot(object):
       if self._count_fig > self._nIterations:
         tmp = os.path.abspath(self._directory)
         shutil.move(tmp, tmp + '_complete')
+        time.sleep(1) # delays for 5 seconds
     else:
       plt.pause(1e-6)
 

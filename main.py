@@ -18,7 +18,7 @@ elif len(sys.argv) == 1:
 else:
   raise Exception(" Too many parameters...")
 
-NumberIterations = 50
+NumberIterations = 2000
 
 rtp = RealTimePlot(
                     num_point_type=5
@@ -42,9 +42,9 @@ method = { 'name':'ransac'
 hp = HandlePts()
 
 kalman = Kalman(
-                 A = numpy.matrix([[0.975, 0.0],[0.0, 0.985]])
+                 A = numpy.matrix([[0.975, 0.0],[0.0, 0.975]])
                 ,Q = numpy.matrix([[1.0, 0.0],[0.0, 1.0]]) # model covariance matrix
-                ,R = numpy.matrix([[200.0, 0.0],[0.0, 200.0]]) # measure covariance matrix
+                ,R = numpy.matrix([[100.0, 0.0],[0.0, 100.0]]) # measure covariance matrix
                )
 
 x = numpy.matrix([[0.0],[0.0]])
@@ -74,6 +74,10 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
         data[key].append(pt)
       angle += msg.angle_increment
 
+  #for i in range(50):
+  #  data['L'].append((i*0.1, numpy.random.normal(scale=0.3)+2.0))
+  #  data['R'].append((i*0.1, numpy.random.normal(scale=0.3)-2.0))
+  #data['ALL'] = data['L'] + data['R']
 
   current_time = time.time()
   method['L'].run(data['L'], 0)
@@ -95,7 +99,7 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
 
   rtp.plotLine(*zip(*utils.pointsFromModel(method['L'].model)), index=0)
   rtp.plotLine(*zip(*utils.pointsFromModel(method['R'].model)), index=1)
-  rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
+  #rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
   rtp.plotLine(*zip(*utils.pointsFromModel(x)), index=3)
 
   #rtp.plotDash(*zip(*utils.pointsFromModel(xpre)), index=0)
