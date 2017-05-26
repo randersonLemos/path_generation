@@ -133,13 +133,13 @@ class HandlePts(object):
     key = False
     #ptb = self.bisectrixFrame(pt, model)
     ptb = pt
-    #if ptb[0] <= 5.0 and ptb[0] >= -1.0:
-    if ptb[0] <= 15.0 and ptb[0] >= -10.0:
-      #if ptb[1] >= 0.0 and ptb[1] <= 2.1:
-      if ptb[1] >= 0.0:
+    if ptb[0] <= 5.0 and ptb[0] >= -1.0:
+    #if ptb[0] <= 15.0 and ptb[0] >= -10.0:
+      if ptb[1] >= 0.0 and ptb[1] <= 2.1:
+      #if ptb[1] >= 0.0:
         key = 'L'
-      #elif ptb[1] <= 0.0 and ptb[1] >= -2.1:
-      elif ptb[1] <= 0.0:
+      elif ptb[1] <= 0.0 and ptb[1] >= -2.1:
+      #elif ptb[1] <= 0.0:
         key = 'R'
     return key
 

@@ -58,7 +58,7 @@ EstimationTotalTime = 0.0
 
 time_ = 1310046785
 #time_ = 1310046820
-bag = rosbag.Bag('../bags/output.bag')
+bag = rosbag.Bag('bags/output.bag')
 for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rostime.Time(time_))):
   Time.append(t.to_time())
 

@@ -100,16 +100,16 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
         //printf("angCoeffs: %f | ", angCoeff);
         if(side == 0)
         {
-            bias  = 1.00 + 1.00*exp(-pow((linCoeff-1.300)/(1.500),6.0));
+            bias  = 1.00 + 3.00*exp(-pow((linCoeff-1.300)/(1.500),6.0));
             //printf("1 bias: %f | ", bias);
-            bias *= (1.00 + 0.75*exp(- pow((angCoeff+0.055)/(0.070),2.0)));
+            bias *= (1.00 + 0.75*exp(-pow((angCoeff+0.050)/(0.100),2.0)));
             //printf("2 bias: %f\n", bias);
         }
         else
         {
-            bias  = 1.00 + 5.00*exp(-pow((linCoeff+1.300)/(1.500),6.0));
+            bias  = 1.00 + 3.00*exp(-pow((linCoeff+1.300)/(1.500),6.0));
             //printf("1 bias: %f | ", bias);
-            bias *= (1.00 + 0.75*exp(- pow((angCoeff-0.055)/(0.070),2.0)));
+            bias *= (1.00 + 0.75*exp(-pow((angCoeff-0.050)/(0.100),2.0)));
             //printf("2 bias: %f\n", bias);
         }
 
