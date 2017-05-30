@@ -89,8 +89,8 @@ class Ransac(object):
   def _setVariables(self, data, side):
     self.data = self._pythonlist2C2dArray(data)
     self.n = self._INT(len(data))
-    self.maxT = self._INT(100)
-    self.threshold = self._FLOAT(0.500)
+    self.maxT = self._INT(90)
+    self.threshold = self._FLOAT(0.250)
     self.model = (self._FLOAT * 3)(0.0,0.0,0.0)
     self.inliers = self._INT(0)
     self.side = self._INT(side)
@@ -133,12 +133,12 @@ class HandlePts(object):
     key = False
     #ptb = self.bisectrixFrame(pt, model)
     ptb = pt
-    if ptb[0] <= 5.0 and ptb[0] >= -1.0:
+    if ptb[0] <= 4.0 and ptb[0] >= -1.0:
     #if ptb[0] <= 15.0 and ptb[0] >= -10.0:
-      if ptb[1] >= 0.0 and ptb[1] <= 2.1:
+      if ptb[1] >= 0.0 and ptb[1] <= 2.5:
       #if ptb[1] >= 0.0:
         key = 'L'
-      elif ptb[1] <= 0.0 and ptb[1] >= -2.1:
+      elif ptb[1] <= 0.0 and ptb[1] >= -2.5:
       #elif ptb[1] <= 0.0:
         key = 'R'
     return key

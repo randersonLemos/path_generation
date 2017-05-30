@@ -1,50 +1,51 @@
 #include "ransac2Dline.hpp"
 
-int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
-                  float *bestModel, int *bestInliers, int side,
-                  int verbose) 
-{
+int ransac_2Dline(float **data, int n, int maxT, float threshold,
+                  float *bestModel, int *bestInliers, int side, int verbose) {
 
     if(verbose)
-        printf("Start RANSAC, n=%d, maxT=%d, t=%.2f\n\n", ndata, maxT, threshold);
-
-    bestModel[0] = 0.0;
-    bestModel[1] = 0.0;
-    bestModel[2] = 0.0;
+        printf("Start RANSAC, n=%d, maxT=%d, t=%.2f\n\n", n, maxT, threshold);
 
     *bestInliers = 0;
 
+    int inliers = 0;
     int Tcount = 0;
+    int ndata = n;
     int nr = 2;
-    int i = 0;
-    float bestScore = 1e6;
+    int i;
 
     float **randSet = (float **) malloc(nr * sizeof(float *));
     if(randSet == NULL) { perror("out of memory\n"); exit(0); }
+
     for(i = 0; i < nr; i++)
     {
         randSet[i] = (float *) malloc(2 * sizeof(float));
         if(randSet[i] == NULL) { perror("out of memory\n"); exit(0); }
     }
 
-    float **conSet = (float **) malloc(ndata * sizeof(float *));
+    float **conSet = (float **) malloc(n * sizeof(float *));
     if(conSet == NULL) { perror("out of memory\n"); exit(0); }
-    for(i = 0; i < ndata; i++)
+
+    for(i = 0; i < n; i++)
     {
         conSet[i] = (float *) malloc(2 * sizeof(float));
         if(conSet[i] == NULL) { perror("out of memory\n"); exit(0); }
     }
 
-    float **bestconSet = (float **) malloc(ndata * sizeof(float *));
-    if(bestconSet == NULL) { perror("out of memory\n"); exit(0); }
-    for(i = 0; i < ndata; i++)
+    float **conSetBest = (float **) malloc(n * sizeof(float *));
+    if(conSetBest == NULL) { perror("out of memory\n"); exit(0); }
+
+    for(i = 0; i < n; i++)
     {
-        bestconSet[i] = (float *) malloc(2 * sizeof(float));
-        if(bestconSet[i] == NULL) { perror("out of memory\n"); exit(0); }
+        conSetBest[i] = (float *) malloc(2 * sizeof(float));
+        if(conSetBest[i] == NULL) { perror("out of memory\n"); exit(0); }
     }
 
-    srand((unsigned)time(NULL)); // set rand seed
+    float randModel[3];
+    float point[2];
+    float bestScore = 0.0;
 
+    srand(time(NULL)); // set rand seed
 
     while(maxT > Tcount)
     {
@@ -52,145 +53,135 @@ int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
             printf("\n#%d ITERATION >>>>>>>>>>>>>>>>>>>>>>>\n", Tcount);
 
         // Select 2 points at random to form a trial model
-        if(randomSelect(randSet, nr, data, ndata)) { break; }
+        if(randomSelect(randSet, nr, data, &ndata) == -1)
+            break;
 
         if(verbose)
-            printf(" selected points: (%.3f, %.3f) and (%.3f, %.3f)\n",
-                    randSet[0][0], randSet[0][1], randSet[1][0],
+            printf(" selected points: (%.3f, %.3f) and (%.3f, %.3f)\n", 
+                    randSet[0][0], randSet[0][1], randSet[1][0], 
                     randSet[1][1]);
 
         // Fit model to the random selection of data points
-        float randModel[3];
         twoPointsLine(randModel, randSet);
 
         if(verbose)
             printf(" rand model: %.3f*x + %.3f*y + %.3f = 0\n", randModel[0], 
             randModel[1], randModel[2]);
 
-        int inliers = 0;
-        float point[2] = {0.0, 0.0};
-        float error = 0.0;
-        float score = 0.0;
-        for(i = 0; i < ndata; i++)
+        inliers = 0;
+
+        // Evaluate distances between points and model.
+        // Given a threshold, create a consensus set with the points
+        // that are inliers.
+        for(i = 0; i < n; i++)
         {
             point[0] = data[i][0];
             point[1] = data[i][1];
 
-            if(fitModel_line(point, randModel, error, threshold))
+            if(fitModel_line(point, randModel, threshold))
             {
                 conSet[inliers][0] = point[0];
                 conSet[inliers][1] = point[1];
                 inliers++;
-                score += error;
-            }
-            else
-            {
-                score += threshold;
-                //score += error;
             }
         }
 
         if(verbose)
             printf(" inliers = %d\n", inliers);
 
+
         float bias = 1.0;
-        float linCoeff = -randModel[2]/(randModel[1]+1e-6);
-        //printf("linCoeffs: %f | ", linCoeff);
-        float angCoeff = -randModel[0]/(randModel[1]+1e-6);
-        //printf("angCoeffs: %f | ", angCoeff);
+        float lin_coeff = - randModel[2]/(randModel[1]+1e-6);
+        float ang_coeff = - randModel[0]/(randModel[1]+1e-6);
+        float lin_meam  = 1.350;
+        float lin_sigma = 1.400;
+        float ang_mean  = 0.030;
+        float ang_sigma = 0.080;
+
         if(side == 0)
         {
-            bias  = 1.00 + 3.00*exp(-pow((linCoeff-1.300)/(1.500),6.0));
-            //printf("1 bias: %f | ", bias);
-            bias *= (1.00 + 0.75*exp(-pow((angCoeff+0.050)/(0.100),2.0)));
-            //printf("2 bias: %f\n", bias);
+            //bias  = 1.00 + 3.00*exp(-pow((lin_coeff-lin_mean)/(lin_sigma),6.0));
+
+            bias *= (1.00 + 1.00*exp(-pow((ang_coeff+ang_mean)/(ang_sigma),2.0)));
         }
         else
         {
-            bias  = 1.00 + 3.00*exp(-pow((linCoeff+1.300)/(1.500),6.0));
-            //printf("1 bias: %f | ", bias);
-            bias *= (1.00 + 0.75*exp(-pow((angCoeff-0.050)/(0.100),2.0)));
-            //printf("2 bias: %f\n", bias);
+            //bias  = 1.00 + 3.00*exp(-pow((lin_coeff+lin_mean)/(lin_sigma),6.0));
+
+            bias *= (1.00 + 1.00*exp(-pow((ang_coeff-ang_mean)/(ang_sigma),2.0)));
         }
 
-        if(score*(1.0/bias) < bestScore)
-        //if(score < bestScore)
+
+        if(inliers*bias > bestScore)  // Largest set of inliers.
         {
-           //printf("1 score: %f\n", score);
-           //printf("2 score: %f\n", score*(1.0/bias));
-           if(verbose)
+            if(verbose)
                 printf(" >> IT'S THE BEST MODEL !!! <<\n");
 
-            estimateModel_line(bestModel, conSet, inliers);
-            bestScore = score*(1.0/bias);
-            //bestScore = score;
-            for(i = 0; i < inliers; i++){
-                bestconSet[i][0] = conSet[i][0];
-                bestconSet[i][1] = conSet[i][1];
+            for(i = 0; i < inliers; ++i)
+            {
+                conSetBest[i][0] = conSet[i][0];
+                conSetBest[i][1] = conSet[i][1];
             }
 
+            estimateModel_line(bestModel, conSet, inliers);
             *bestInliers = inliers;
+            bestScore = inliers*bias;
 
             if(verbose)
-            {
-                printf(" reestimated model: %.3f*x + %.3f*y + %.3f = 0\n",
-                        bestModel[0], bestModel[1], bestModel[2]);
-                printf(" score: %f\n", bestScore);
-            }
+            printf(" reestimated model: %.3f*x + %.3f*y + %.3f = 0\n",
+                    bestModel[0], bestModel[1], bestModel[2]);
         }
 
         Tcount++;
-        if(Tcount > maxT) { break; }
     }
-
 
     for(i = 0; i < *bestInliers; i++){
-        data[i][0] = bestconSet[i][0];
-        data[i][1] = bestconSet[i][1];
+        data[i][0] = conSetBest[i][0];
+        data[i][1] = conSetBest[i][1];
     }
 
-    for(i = 0; i < nr; i++){
+    for(i = 0; nr < 2; i++){
         free(randSet[i]);
     }
     free(randSet);
 
-    for(i = 0; i < ndata; i++){
+    for(i = 0; i < n; i++){
         free(conSet[i]);
     }
     free(conSet);
 
-    for(i = 0; i < ndata; i++){
-        free(bestconSet[i]);
+    for(i = 0; i < n; i++){
+        free(conSetBest[i]);
     }
-    free(bestconSet);
+    free(conSetBest);
 
-
-    if((int)bestScore==(int)1e6)
+    if(bestInliers==0)
     {
         printf("\n### ERROR: ransac was unable to find a useful solution.\n");
         return(-1);
     }
-
-    return(0);
+    else
+    {
+        return(0);
+    }
 }
 
-int randomSelect(float **sel, int nsel, float **data, int ndata)
-{
+int randomSelect(float **sel, int nsel, float **data, int *ndata) {
+
     int r = 0;
-    int k = ndata;
+    int k = *ndata;
     int i;
 
-    if(nsel > ndata)
+    if(nsel > *ndata)
     {
         printf("randomSelect: unable to select %d points from dataset[%d]\n", 
-                nsel, ndata);
-        return 1;
+                nsel, *ndata);
+        return -1;
     }
 
     for(i = 0; i < nsel; i++, k--)
     {
         r = rand()%(k);
-        //printf("%d\n",r);
 
         sel[i][0] = data[r][0];
         sel[i][1] = data[r][1];
@@ -202,23 +193,27 @@ int randomSelect(float **sel, int nsel, float **data, int ndata)
         data[k-1][1] = sel[i][1];
     }
 
-    //printf("k = %d\n", k);
+    //*ndata = k;
+    //printf("ndata = %d\n", *ndata);
 
     return 0;
 }
 
-int fitModel_line(float *point, float *model, float &error, float threshold)
-{
-    error = fabs(model[0]*point[0] + model[1]*point[1] + model[2])/sqrt(pow(model[0], 2) + pow(model[1], 2));
+int fitModel_line(float *point, float *l, float threshold) {
+    // Estimate distance between point and model
+    // d = abs(a*x + b*y + c)/sqrt(a^2 + b^2)
 
-    if(error<=threshold)
+    float d=0;
+
+    d = fabs(l[0]*point[0] + l[1]*point[1] + l[2])/sqrt(pow(l[0], 2) + pow(l[1], 2));
+
+    if(d<=threshold)
         return 1;
     else
         return 0;
 }
 
-void estimateModel_line(float *l, float **P, int n)
-{
+void estimateModel_line(float *l, float **P, int n) {
     if(n<=2) {
         perror("Need at least tree points\n");
         l[0] = 0;
@@ -257,11 +252,11 @@ void estimateModel_line(float *l, float **P, int n)
     l[1] = 1.0;
     l[2] = -linCoeff;
     }
+
 }
 
-void twoPointsLine(float *l, float **P)
-{
+void twoPointsLine(float *l, float **P){
     l[0] = 1;
     l[1] = -((P[0][0]-P[1][0])/(P[0][1]-P[1][1]));
-    l[2] = -P[0][0] -l[1]*P[0][1];
+    l[2] = -l[0]*P[0][0] -l[1]*P[0][1];
 }

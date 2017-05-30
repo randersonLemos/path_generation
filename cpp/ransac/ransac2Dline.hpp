@@ -22,9 +22,8 @@
 	
 	Retorna 0 em caso de sucesso.
 */
-extern "C" int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
-					         float *bestModel, int *inliers, int side,
-                             int verbose);
+extern "C" int ransac_2Dline(float **data, int n, int maxT, float threshold,
+					float *bestModel, int *bestInliers, int side, int verbose);
 
 
 /* randomSelect - retira n pontos aleatorios de uma matriz
@@ -39,7 +38,7 @@ extern "C" int ransac_2Dline(float **data, int ndata, int maxT, float threshold,
 	
 	Retorna 0 em caso de sucesso.
 */
-int randomSelect(float **sel, int nsel, float **data, int ndata);
+int randomSelect(float **sel, int nsel, float **data, int *ndata);
 
 
 /* fitModel_line - verifica se um dado ponto se encaixa a um modelo dentro do threshold definido
@@ -51,7 +50,7 @@ int randomSelect(float **sel, int nsel, float **data, int ndata);
 	
 	Retorna 1 caso o ponto seja um inlier e 0 caso seja outlier.
 */
-int fitModel_line(float *point, float *model, float &error, float threshold);
+int fitModel_line(float *point, float *l, float threshold);
 
 
 /* estimateModel_line - estima o modelo de uma reta que se encaixa aos pontos dados, o modelo a*x + b*y + c = 0 é obtido por decomposicao SVD.

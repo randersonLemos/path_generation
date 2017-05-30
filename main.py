@@ -18,7 +18,7 @@ elif len(sys.argv) == 1:
 else:
   raise Exception(" Too many parameters...")
 
-NumberIterations = 2000
+NumberIterations = 1500
 
 rtp = RealTimePlot(
                     num_point_type=5
@@ -42,9 +42,9 @@ method = { 'name':'ransac'
 hp = HandlePts()
 
 kalman = Kalman(
-                 A = numpy.matrix([[0.975, 0.0],[0.0, 0.975]])
+                 A = numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
                 ,Q = numpy.matrix([[1.0, 0.0],[0.0, 1.0]]) # model covariance matrix
-                ,R = numpy.matrix([[100.0, 0.0],[0.0, 100.0]]) # measure covariance matrix
+                ,R = numpy.matrix([[1.0, 0.0],[0.0, 1.0]]) # measure covariance matrix
                )
 
 x = numpy.matrix([[0.0],[0.0]])
@@ -52,6 +52,7 @@ z = numpy.matrix([[0.0],[0.0]])
 P = numpy.matrix([[1e4,0],[0,1e4]])
 
 X = []
+Z = []
 Time = []
 EstimationTotalTime = 0.0
 
@@ -87,11 +88,12 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
   model = utils.computeBisectrix(method['L'].model,method['R'].model)
   z = numpy.matrix(utils.fromThree2Two(model)).T
   x, P = kalman.step(x,P,z)
+  Z.append(numpy.squeeze(numpy.asarray(z)))
   X.append(numpy.squeeze(numpy.asarray(x)))
 
 
   # Visualization
-  #rtp.plotPoint(*zip(*data['ALL']),index=0)
+  rtp.plotPoint(*zip(*data['ALL']),index=0)
   rtp.plotPoint(*zip(*data['L']),index=1)
   rtp.plotPoint(*zip(*data['R']),index=2)
   rtp.plotPoint(*zip(*method['L'].getInliers()),index=3)
@@ -108,41 +110,47 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
 
 
   if count > NumberIterations:
-    #utils.csv2( # To use in Vero kinematic simulator
-    #              filename='bisectrix'
-    #            , fieldnames=['t','ang_coeff','lin_coeff']
-    #            , dataframe=[(a,)+tuple(b) for  a,b in zip(Time,X)]
-    #           )
     print "Simulation elapsed time: ", EstimationTotalTime/(NumberIterations)
     rtp.close()
+    if save:
+      utils.csv2( # To use in Vero kinematic simulator
+                    filename='bisectrix'
+                  , fieldnames=[ 'count','t'
+                                ,'ang_coeff','lin_coeff'
+                                ,'ang_coeff_est','lin_coeff_est']
+                  , dataframe=[(a,)+(b,)+tuple(c)+tuple(d)
+                    for a,b,c,d in zip(range(NumberIterations),Time,Z,X)]
+                 )
     break
 
-  else: print 'count: {}'.format(count)
-    #if count%50 == 0:
+  else:
+    print 'count: {}'.format(count)
+    if save:
+      if count%100 == 0:
 
-    #  utils.printLatex(
-    #                    'cloud_'
-    #                   ,str(count)
-    #                   ,numpy.array(utils.fromThree2Two(ransac['L'].model))
-    #                   ,numpy.array(utils.fromThree2Two(ransac['R'].model))
-    #                   ,numpy.squeeze(numpy.asarray(x))
-    #                   ,numpy.squeeze(numpy.asarray(z))
-    #                  )
+        utils.printLatex(
+                          'cloud_'
+                         ,str(count)
+                         ,numpy.array(utils.fromThree2Two(method['L'].model))
+                         ,numpy.array(utils.fromThree2Two(method['R'].model))
+                         ,numpy.squeeze(numpy.asarray(x))
+                         ,numpy.squeeze(numpy.asarray(z))
+                        )
 
-    #  utils.csv2(
-    #              filename='cloud_'+str(count)
-    #             ,fieldnames=['x','y']
-    #             ,dataframe=data['L']+data['R']
-    #            )
+        utils.csv2(
+                    filename='cloud_'+str(count)
+                   ,fieldnames=['x','y']
+                   ,dataframe=data['L']+data['R']
+                  )
 
-    #  utils.csv2(
-    #              filename='cloudall_'+str(count)
-    #             ,fieldnames=['x','y']
-    #             ,dataframe=data['ALL']
-    #            )
+        utils.csv2(
+                    filename='cloudall_'+str(count)
+                   ,fieldnames=['x','y']
+                   ,dataframe=data['ALL']
+                  )
 
-    #  utils.csv2(
-    #              filename='cloudinliers_'+str(count)
-    #             ,fieldnames=['x','y']
-    #             ,dataframe=ransac['L'].getInliers()+ransac['R'].getInliers()
-    #            )
+        utils.csv2(
+                    filename='cloudinliers_'+str(count)
+                   ,fieldnames=['x','y']
+                   ,dataframe=method['L'].getInliers()+method['R'].getInliers()
+                  )
