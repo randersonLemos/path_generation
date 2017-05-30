@@ -34,12 +34,26 @@ rtp = RealTimePlot(
 #          ,'R':Ols()
 #         }
 
+
+nIterations_ = 100
+threshold_ = 0.1
 method = { 'name':'ransac'
-          ,'L':Ransac()
-          ,'R':Ransac()
+          ,'L':Ransac(
+                       nIterations = nIterations_
+                      ,threshold= threshold_
+                     )
+          ,'R':Ransac(
+                       nIterations = nIterations_
+                      ,threshold = threshold_
+                     )
          }
 
-hp = HandlePts()
+hp = HandlePts(
+                xmin = -1.0
+               ,xmax =  4.0
+               ,ymin = -2.5
+               ,ymax =  2.5
+              )
 
 kalman = Kalman(
                  A = numpy.matrix([[1.0, 0.0],[0.0, 1.0]])

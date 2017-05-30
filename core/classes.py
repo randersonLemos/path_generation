@@ -55,7 +55,7 @@ class Ols(object):
 
 
 class Ransac(object):
-  def __init__(self):
+  def __init__(self, nIterations, threshold):
     self._INT   = ctypes.c_int
     self._PINT  = ctypes.POINTER(self._INT)
     self._PPINT = ctypes.POINTER(self._PINT)
@@ -65,8 +65,8 @@ class Ransac(object):
 
     self.data = None
     self.n = None
-    self.maxT = None
-    self.threshold = None
+    self.maxT = self._INT(nIterations)
+    self.threshold = self._FLOAT(threshold)
     self.model = None
     self.inliers = None
     self.size = None
@@ -89,8 +89,6 @@ class Ransac(object):
   def _setVariables(self, data, side):
     self.data = self._pythonlist2C2dArray(data)
     self.n = self._INT(len(data))
-    self.maxT = self._INT(90)
-    self.threshold = self._FLOAT(0.250)
     self.model = (self._FLOAT * 3)(0.0,0.0,0.0)
     self.inliers = self._INT(0)
     self.side = self._INT(side)
@@ -116,6 +114,12 @@ class Ransac(object):
 
 
 class HandlePts(object):
+  def __init__(self, xmin, xmax, ymin, ymax):
+    self.xmin = xmin
+    self.xmax = xmax
+    self.ymin = ymin
+    self.ymax = ymax
+
   def bisectrixFrame(self, pt, model):
     th = math.atan(-model[0]/(model[1] + 1e-6))
     vecrot = self.systemRotation((0,model[2]/model[1]),th)
@@ -133,12 +137,12 @@ class HandlePts(object):
     key = False
     #ptb = self.bisectrixFrame(pt, model)
     ptb = pt
-    if ptb[0] <= 4.0 and ptb[0] >= -1.0:
+    if ptb[0] <= self.xmax and ptb[0] >= self.xmin:
     #if ptb[0] <= 15.0 and ptb[0] >= -10.0:
-      if ptb[1] >= 0.0 and ptb[1] <= 2.5:
+      if ptb[1] >= 0.0 and ptb[1] <= self.ymax:
       #if ptb[1] >= 0.0:
         key = 'L'
-      elif ptb[1] <= 0.0 and ptb[1] >= -2.5:
+      elif ptb[1] <= 0.0 and ptb[1] >= self.ymin:
       #elif ptb[1] <= 0.0:
         key = 'R'
     return key
