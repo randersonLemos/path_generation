@@ -4,6 +4,7 @@ import math
 import numpy
 import shutil
 import ctypes
+import pprint
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib as mpl
@@ -55,7 +56,7 @@ class Ols(object):
 
 
 class Ransac(object):
-  def __init__(self, nIterations, threshold):
+  def __init__(self, nTries, threshold):
     self._INT   = ctypes.c_int
     self._PINT  = ctypes.POINTER(self._INT)
     self._PPINT = ctypes.POINTER(self._PINT)
@@ -65,13 +66,15 @@ class Ransac(object):
 
     self.data = None
     self.n = None
-    self.maxT = self._INT(nIterations)
+    self.maxT = self._INT(nTries)
     self.threshold = self._FLOAT(threshold)
     self.model = None
     self.inliers = None
     self.size = None
     self.side = None
     self.verbose = None
+
+    self.spenttime = 0
 
     self._libransac = ctypes.CDLL('./cpp/ransac/libransac.so')
     self._ransac_2Dline = getattr(self._libransac, 'ransac_2Dline')
@@ -96,6 +99,7 @@ class Ransac(object):
 
   def run(self, data, side):
     self._setVariables(data, side)
+    current_time = time.time()
     self._ransac_2Dline(  ctypes.byref(self.data)
                         , self.n
                         , self.maxT
@@ -105,7 +109,7 @@ class Ransac(object):
                         , self.side
                         , self.verbose
                        )
-
+    self.spenttime += time.time() - current_time
   def getInliers(self):
     tmp = []
     for i in range(self.inliers.value):
@@ -219,16 +223,20 @@ class RealTimePlot(object):
 
   def update(self):
     if self._save_images:
-      if not os.path.exists(self._directory):
-        os.makedirs(self._directory)
       self._fig.savefig(self._directory+'/{:05}.png'.format(self._count_fig), bbox_inches='tight')
       self._count_fig += 1
-      if self._count_fig > self._nIterations:
-        tmp = os.path.abspath(self._directory)
-        shutil.move(tmp, tmp + '_complete')
-        time.sleep(1) # delays for 5 seconds
     else:
       plt.pause(1e-6)
 
   def close(self):
     plt.close()
+
+class AppendFile(object):
+  def __init__(self, dir_name):
+   self.fhandle = open(dir_name+"/README.txt", "a")
+
+  def write(self, obj):
+   pprint.pprint(obj, stream=self.fhandle, width=15)
+
+  def close(self):
+    self.fhandle.close()

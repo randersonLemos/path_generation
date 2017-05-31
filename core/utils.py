@@ -65,17 +65,17 @@ def saveNpArr2Mat(arr):
   scipy.io.savemat('out.mat',{'arr': arr})
 
 
-def csv2(filename, fieldnames, dataframe):
-  with open('csv/'+filename+'.csv', 'w') as csvfile:
+def csv2(dir_name, filename, fieldnames, dataframe):
+  with open(dir_name+'/csv'+'/'+filename+'.csv', 'w') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
     for data in dataframe:
       writer.writerow(dict(zip(fieldnames,data)))
 
 
-def printLatex(fname, idx, left_model, right_model, bisectrix, filtered):
+def printLatex(dir_name, filename, idx, left_model, right_model, bissectrix, filtered):
 
-  fhandle = open('tikz/'+fname+idx+'.tex', 'w')
+  fhandle = open(dir_name+'/tikz'+'/'+filename+idx+'.tex', 'w')
 
   print >> fhandle, """%
 %\\begin{{figure}}[!htb]
@@ -196,8 +196,8 @@ def printLatex(fname, idx, left_model, right_model, bisectrix, filtered):
             ,right_model[1]                      # 6
             ,filtered[0]
             ,filtered[1]                         # 8
-            ,bisectrix[0]
-            ,bisectrix[1]                        # 10
+            ,bissectrix[0]
+            ,bissectrix[1]                        # 10
            )
 
   fhandle.close()

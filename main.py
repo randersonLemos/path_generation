@@ -1,82 +1,121 @@
+import os
 import sys
 import time
 import copy
 import rospy
 import numpy
+import shutil
 import rosbag
 import warnings
 import core.utils as utils
-from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, Ols
+from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, AppendFile
 
-if len(sys.argv) == 2:
+if len(sys.argv) == 3:
   if not sys.argv[1] in ('True', 'False'):
-    raise Exception("The parameter save is or True or False...")
-  save = sys.argv[1] in ('True')
-elif len(sys.argv) == 1:
-  warnings.warn("Boolean parameter save not specified.\nUsing the default value, which is False...")
-  save = False
-else:
-  raise Exception(" Too many parameters...")
+    raise Exception("First parameter must be True or False...")
+  else:
+    save_param = sys.argv[1] in ('True')
 
-NumberIterations = 1500
+  try:
+    threshold_param = float(sys.argv[2])
+  except:
+    raise Exception("Second parameter must be a number...")
+
+elif len(sys.argv) == 1:
+  warnings.warn("First and second parameter nor specified.\nUsing the default values False and 0.25...")
+  save_param = False
+  threshold_param = 0.25
+else:
+  raise Exception(" Too many or too less paramters...")
+
+numberIterations = 1500
+directory = 'results/' + time.strftime("%Y_%m_%d_%H_%M_%S")
+
+rtpdic = {
+           'save_images': save_param
+          ,'nIterations': numberIterations
+          ,'dir_name': directory
+         }
+
+methoddic = {
+              'nTries': 125
+             ,'threshold': threshold_param
+            }
+
+hpdic = {
+          'xmin': -1.0
+         ,'xmax':  4.0
+         ,'ymin': -2.5
+         ,'ymax':  2.5
+        }
+
+kalmandic = {
+              'A': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
+             ,'Q': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
+             ,'R': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
+            }
+
+if save_param:
+  os.makedirs(directory)
+  os.makedirs(directory+"/csv")
+  os.makedirs(directory+"/tikz")
+  appendfile = AppendFile(directory)
+  appendfile.write('Simulation:')
+  appendfile.write(rtpdic)
+  appendfile.write('Method:')
+  appendfile.write(methoddic)
+  appendfile.write('Handle points:')
+  appendfile.write(hpdic)
+  appendfile.write('Kalman filter:')
+  appendfile.write(kalmandic)
 
 rtp = RealTimePlot(
-                    num_point_type=5
-                   ,num_line_type=4
-                   ,num_dash_type=1
-                   ,save_images=save
-                   ,nIterations=NumberIterations
-                   ,dir_name= 'png/' + time.strftime("%Y_%m_%d_%H_%M_%S")
+                    num_point_type = 5
+                   ,num_line_type = 4
+                   ,num_dash_type = 1
+                   ,save_images = rtpdic['save_images']
+                   ,nIterations = rtpdic['nIterations']
+                   ,dir_name = rtpdic['dir_name']
                   )
 
-#method = { 'name':'ols'
-#          ,'L':Ols()
-#          ,'R':Ols()
-#         }
-
-
-nIterations_ = 100
-threshold_ = 0.1
 method = { 'name':'ransac'
           ,'L':Ransac(
-                       nIterations = nIterations_
-                      ,threshold= threshold_
+                       nTries = methoddic['nTries']
+                      ,threshold = methoddic['threshold']
                      )
           ,'R':Ransac(
-                       nIterations = nIterations_
-                      ,threshold = threshold_
+                       nTries = methoddic['nTries']
+                      ,threshold = methoddic['threshold']
                      )
          }
 
 hp = HandlePts(
-                xmin = -1.0
-               ,xmax =  4.0
-               ,ymin = -2.5
-               ,ymax =  2.5
+                xmin = hpdic['xmin']
+               ,xmax = hpdic['xmax']
+               ,ymin = hpdic['ymin']
+               ,ymax = hpdic['ymax']
               )
 
 kalman = Kalman(
-                 A = numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
-                ,Q = numpy.matrix([[1.0, 0.0],[0.0, 1.0]]) # model covariance matrix
-                ,R = numpy.matrix([[1.0, 0.0],[0.0, 1.0]]) # measure covariance matrix
+                 A = kalmandic['A']
+                ,Q = kalmandic['Q'] # model covariance matrix
+                ,R = kalmandic['R'] # measure covariance matrix
                )
+
 
 x = numpy.matrix([[0.0],[0.0]])
 z = numpy.matrix([[0.0],[0.0]])
 P = numpy.matrix([[1e4,0],[0,1e4]])
 
-X = []
 Z = []
+X = []
 Time = []
-EstimationTotalTime = 0.0
-
 
 time_ = 1310046785
 #time_ = 1310046820
 bag = rosbag.Bag('bags/output.bag')
 for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rostime.Time(time_))):
   Time.append(t.to_time())
-
 
   angle = msg.angle_min
   data = {'ALL':[], 'L':[], 'R':[]}
@@ -89,15 +128,8 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
         data[key].append(pt)
       angle += msg.angle_increment
 
-  #for i in range(50):
-  #  data['L'].append((i*0.1, numpy.random.normal(scale=0.3)+2.0))
-  #  data['R'].append((i*0.1, numpy.random.normal(scale=0.3)-2.0))
-  #data['ALL'] = data['L'] + data['R']
-
-  current_time = time.time()
   method['L'].run(data['L'], 0)
   method['R'].run(data['R'], 1)
-  EstimationTotalTime += time.time() - current_time
 
   model = utils.computeBisectrix(method['L'].model,method['R'].model)
   z = numpy.matrix(utils.fromThree2Two(model)).T
@@ -105,66 +137,76 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
   Z.append(numpy.squeeze(numpy.asarray(z)))
   X.append(numpy.squeeze(numpy.asarray(x)))
 
-
   # Visualization
   rtp.plotPoint(*zip(*data['ALL']),index=0)
   rtp.plotPoint(*zip(*data['L']),index=1)
   rtp.plotPoint(*zip(*data['R']),index=2)
   rtp.plotPoint(*zip(*method['L'].getInliers()),index=3)
   rtp.plotPoint(*zip(*method['R'].getInliers()),index=4)
-
   rtp.plotLine(*zip(*utils.pointsFromModel(method['L'].model)), index=0)
   rtp.plotLine(*zip(*utils.pointsFromModel(method['R'].model)), index=1)
   #rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
   rtp.plotLine(*zip(*utils.pointsFromModel(x)), index=3)
-
   #rtp.plotDash(*zip(*utils.pointsFromModel(xpre)), index=0)
-
   rtp.update()
 
-
-  if count > NumberIterations:
-    print "Simulation elapsed time: ", EstimationTotalTime/(NumberIterations)
-    rtp.close()
-    if save:
+  if count > numberIterations:
+    print "Simulation elapsed time: ", (method['L'].spenttime + method['R'].spenttime)/(2*numberIterations)
+    if save_param:
       utils.csv2( # To use in Vero kinematic simulator
-                    filename='bisectrix'
-                  , fieldnames=[ 'count','t'
-                                ,'ang_coeff','lin_coeff'
-                                ,'ang_coeff_est','lin_coeff_est']
-                  , dataframe=[(a,)+(b,)+tuple(c)+tuple(d)
-                    for a,b,c,d in zip(range(NumberIterations),Time,Z,X)]
+                   dir_name = directory
+                  ,filename = 'bisectrix'
+                  ,fieldnames = [ 'count','t'
+                                 ,'ang_coeff','lin_coeff'
+                                 ,'ang_coeff_est','lin_coeff_est'
+                                ]
+                  ,dataframe = [(a,)+(b,)+tuple(c)+tuple(d)
+                     for a,b,c,d in zip(range(numberIterations),Time,Z,X)]
                  )
+
+      appendfile.write('Average time:')
+      appendfile.write((method['L'].spenttime + method['R'].spenttime)/(2*numberIterations))
+      appendfile.close()
+
+      rtp.close()
+
+      tmp = os.path.abspath(directory)
+      shutil.move(tmp, tmp + '_complete')
+      time.sleep(1) # delays for 5 seconds
     break
 
   else:
-    print 'count: {}'.format(count)
-    if save:
+    if count%100 == 0:
+      print 'count: {}'.format(count)
+    if save_param:
       if count%100 == 0:
-
         utils.printLatex(
-                          'cloud_'
-                         ,str(count)
-                         ,numpy.array(utils.fromThree2Two(method['L'].model))
-                         ,numpy.array(utils.fromThree2Two(method['R'].model))
-                         ,numpy.squeeze(numpy.asarray(x))
-                         ,numpy.squeeze(numpy.asarray(z))
+                          dir_name = directory
+                         ,filename = 'cloud_'
+                         ,idx = str(count)
+                         ,left_model = numpy.array(utils.fromThree2Two(method['L'].model))
+                         ,right_model = numpy.array(utils.fromThree2Two(method['R'].model))
+                         ,bissectrix = numpy.squeeze(numpy.asarray(z))
+                         ,filtered = numpy.squeeze(numpy.asarray(x))
                         )
 
         utils.csv2(
-                    filename='cloud_'+str(count)
-                   ,fieldnames=['x','y']
-                   ,dataframe=data['L']+data['R']
+                    dir_name = directory
+                   ,filename = 'cloud_'+str(count)
+                   ,fieldnames = ['x','y']
+                   ,dataframe = data['L']+data['R']
                   )
 
         utils.csv2(
-                    filename='cloudall_'+str(count)
-                   ,fieldnames=['x','y']
-                   ,dataframe=data['ALL']
+                    dir_name = directory
+                   ,filename = 'cloudall_'+str(count)
+                   ,fieldnames = ['x','y']
+                   ,dataframe = data['ALL']
                   )
 
         utils.csv2(
-                    filename='cloudinliers_'+str(count)
-                   ,fieldnames=['x','y']
-                   ,dataframe=method['L'].getInliers()+method['R'].getInliers()
+                    dir_name = directory
+                   ,filename = 'cloudinliers_'+str(count)
+                   ,fieldnames = ['x','y']
+                   ,dataframe = method['L'].getInliers()+method['R'].getInliers()
                   )
