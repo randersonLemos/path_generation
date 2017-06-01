@@ -10,7 +10,7 @@ import warnings
 import core.utils as utils
 from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, AppendFile
 
-if len(sys.argv) == 3:
+if len(sys.argv) == 4:
   if not sys.argv[1] in ('True', 'False'):
     raise Exception("First parameter must be True or False...")
   else:
@@ -21,15 +21,21 @@ if len(sys.argv) == 3:
   except:
     raise Exception("Second parameter must be a number...")
 
+  try:
+    nTries_param = int(sys.argv[3])
+  except:
+    raise Exception("Third parameter must be a integer...")
+
 elif len(sys.argv) == 1:
-  warnings.warn("First and second parameter nor specified.\nUsing the default values False and 0.25...")
+  warnings.warn("First, second and third parameters nor specified.\nUsing the default values False,  0.25 and 100...")
   save_param = False
   threshold_param = 0.25
+  nTries_param = 100
 else:
   raise Exception(" Too many or too less paramters...")
 
 numberIterations = 1500
-directory = 'results/' + time.strftime("%Y_%m_%d_%H_%M_%S")
+directory = 'tmp' + '/ransac_biased'+'_'+str(int(100*threshold_param))+'_'+str(nTries_param)
 
 rtpdic = {
            'save_images': save_param
@@ -38,7 +44,7 @@ rtpdic = {
          }
 
 methoddic = {
-              'nTries': 125
+              'nTries': nTries_param
              ,'threshold': threshold_param
             }
 
@@ -56,9 +62,11 @@ kalmandic = {
             }
 
 if save_param:
+  shutil.rmtree(directory, ignore_errors=True)
+  shutil.rmtree(directory+'_complete', ignore_errors=True) # deleting old folders
   os.makedirs(directory)
   os.makedirs(directory+"/csv")
-  os.makedirs(directory+"/tikz")
+  os.makedirs(directory+"/tikz") # making folders
   appendfile = AppendFile(directory)
   appendfile.write('Simulation:')
   appendfile.write(rtpdic)
@@ -166,6 +174,9 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
 
       appendfile.write('Average time:')
       appendfile.write((method['L'].spenttime + method['R'].spenttime)/(2*numberIterations))
+      appendfile.write('Mean and Standard Deviation')
+      appendfile.write(numpy.mean(X[0]))
+      appendfile.write(numpy.std(X[0]))
       appendfile.close()
 
       rtp.close()
