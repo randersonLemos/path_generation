@@ -34,7 +34,7 @@ elif len(sys.argv) == 1:
 else:
   raise Exception(" Too many or too less paramters...")
 
-numberIterations = 1500
+numberIterations = 1400
 directory = 'tmp' + '/ransac_biased'+'_'+str(int(100*threshold_param))+'_'+str(nTries_param)
 
 rtpdic = {
@@ -175,8 +175,8 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
       appendfile.write('Average time:')
       appendfile.write((method['L'].spenttime + method['R'].spenttime)/(2*numberIterations))
       appendfile.write('Mean and Standard Deviation')
-      appendfile.write(numpy.mean(X[0]))
-      appendfile.write(numpy.std(X[0]))
+      appendfile.write(numpy.mean(zip(*X)[0]))
+      appendfile.write(numpy.std(zip(*X)[0]))
       appendfile.close()
 
       rtp.close()

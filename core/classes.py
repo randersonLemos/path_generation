@@ -100,7 +100,7 @@ class Ransac(object):
   def run(self, data, side):
     self._setVariables(data, side)
     current_time = time.time()
-    self._ransac_2Dline(  ctypes.byref(self.data)
+    self._ransac_2Dline(  self.data
                         , self.n
                         , self.maxT
                         , self.threshold
