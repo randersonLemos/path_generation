@@ -1,9 +1,11 @@
+import os
 import csv
 import math
 import numpy
+import shutil
 import pickle
 import scipy.io
-
+from classes import AppendFile
 
 def polar2cartesian(radius, angle):
   x = radius*math.cos(angle)
@@ -71,6 +73,26 @@ def csv2(dir_name, filename, fieldnames, dataframe):
     writer.writeheader()
     for data in dataframe:
       writer.writerow(dict(zip(fieldnames,data)))
+
+
+def saveSetParameters(save_param, directory, rtpdic, methoddic, hpdic, kalmandic):
+  if save_param:
+    shutil.rmtree(directory, ignore_errors=True)
+    shutil.rmtree(directory+'_complete', ignore_errors=True) # deleting old folders
+    os.makedirs(directory)
+    os.makedirs(directory+"/csv")
+    os.makedirs(directory+"/tikz") # making folders
+    appendfile = AppendFile(directory)
+    appendfile.write('Simulation:')
+    appendfile.write(rtpdic)
+    appendfile.write('Method:')
+    appendfile.write(methoddic)
+    appendfile.write('Handle points:')
+    appendfile.write(hpdic)
+    appendfile.write('Kalman filter:')
+    appendfile.write(kalmandic)
+
+
 
 
 def printLatex(dir_name, filename, idx, left_model, right_model, bissectrix, filtered):

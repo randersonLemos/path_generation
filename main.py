@@ -10,11 +10,17 @@ import warnings
 import core.utils as utils
 from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, AppendFile
 
-if len(sys.argv) == 4:
+if len(sys.argv) == 1:
+  warnings.warn("First, second and third parameters not specified." \
+                " Using the default values \"False,  0.25 and 100\"...")
+  save_param = False
+  threshold_param = 0.25
+  nTries_param = 100
+
+elif len(sys.argv) == 4:
   if not sys.argv[1] in ('True', 'False'):
     raise Exception("First parameter must be True or False...")
-  else:
-    save_param = sys.argv[1] in ('True')
+  save_param = sys.argv[1] in ('True')
 
   try:
     threshold_param = float(sys.argv[2])
@@ -26,16 +32,19 @@ if len(sys.argv) == 4:
   except:
     raise Exception("Third parameter must be a integer...")
 
-elif len(sys.argv) == 1:
-  warnings.warn("First, second and third parameters nor specified.\nUsing the default values False,  0.25 and 100...")
-  save_param = False
-  threshold_param = 0.25
-  nTries_param = 100
 else:
-  raise Exception(" Too many or too less paramters...")
+  raise Exception("Too many or too less paramters." \
+                  " Four parameters must be specified in the following" \
+                  " sequence \"save_param, threshold_param, ntries_param\"...")
 
 numberIterations = 1400
-directory = 'tmp' + '/ransac_biased'+'_'+str(int(100*threshold_param))+'_'+str(nTries_param)
+directory = os.path.abspath(
+                              'tmp'
+                            + '/ransac_biased'
+                            + '_'
+                            + str(int(100*threshold_param))
+                            + '_'+str(nTries_param)
+                           )
 
 rtpdic = {
            'save_images': save_param
@@ -61,21 +70,8 @@ kalmandic = {
              ,'R': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
             }
 
-if save_param:
-  shutil.rmtree(directory, ignore_errors=True)
-  shutil.rmtree(directory+'_complete', ignore_errors=True) # deleting old folders
-  os.makedirs(directory)
-  os.makedirs(directory+"/csv")
-  os.makedirs(directory+"/tikz") # making folders
-  appendfile = AppendFile(directory)
-  appendfile.write('Simulation:')
-  appendfile.write(rtpdic)
-  appendfile.write('Method:')
-  appendfile.write(methoddic)
-  appendfile.write('Handle points:')
-  appendfile.write(hpdic)
-  appendfile.write('Kalman filter:')
-  appendfile.write(kalmandic)
+
+utils.saveSetParameters(save_param, directory, rtpdic, methoddic, hpdic, kalmandic)
 
 rtp = RealTimePlot(
                     num_point_type = 5
