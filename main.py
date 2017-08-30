@@ -8,6 +8,7 @@ import shutil
 import rosbag
 import warnings
 import core.utils as utils
+from sklearn import svm
 from core.classes import Ransac, HandlePts, Kalman, RealTimePlot, AppendFile
 
 if len(sys.argv) == 1:
@@ -67,7 +68,7 @@ hpdic = {
 kalmandic = {
               'A': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
              ,'Q': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
-             ,'R': numpy.matrix([[1.0, 0.0],[0.0, 1.0]])
+             ,'R': numpy.matrix([[150.0, 0.0],[0.0, 150.0]])
             }
 
 
@@ -132,11 +133,23 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
         data[key].append(pt)
       angle += msg.angle_increment
 
+  XX = data['L'] + data['R']
+  yy = len(data['L'])*[0] + len(data['R'])*[1]
+
+  clf = svm.SVC(C=0.1,kernel='linear')
+  clf.fit(XX,yy)
+
+  w = clf.coef_[0]
+  a = -w[0] / w[1]
+  b = (clf.intercept_[0]) / w[1]
+
   method['L'].run(data['L'], 0)
   method['R'].run(data['R'], 1)
 
   model = utils.computeBisectrix(method['L'].model,method['R'].model)
-  z = numpy.matrix(utils.fromThree2Two(model)).T
+  #z = numpy.matrix(utils.fromThree2Two(model)).T
+  z = numpy.matrix([a,b]).T
+
   x, P = kalman.step(x,P,z)
   Z.append(numpy.squeeze(numpy.asarray(z)))
   X.append(numpy.squeeze(numpy.asarray(x)))
@@ -145,11 +158,11 @@ for count, (topic, msg, t) in enumerate(bag.read_messages(start_time=rospy.rosti
   rtp.plotPoint(*zip(*data['ALL']),index=0)
   rtp.plotPoint(*zip(*data['L']),index=1)
   rtp.plotPoint(*zip(*data['R']),index=2)
-  rtp.plotPoint(*zip(*method['L'].getInliers()),index=3)
-  rtp.plotPoint(*zip(*method['R'].getInliers()),index=4)
-  rtp.plotLine(*zip(*utils.pointsFromModel(method['L'].model)), index=0)
-  rtp.plotLine(*zip(*utils.pointsFromModel(method['R'].model)), index=1)
-  #rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
+  #rtp.plotPoint(*zip(*method['L'].getInliers()),index=3)
+  #rtp.plotPoint(*zip(*method['R'].getInliers()),index=4)
+  #rtp.plotLine(*zip(*utils.pointsFromModel(method['L'].model)), index=0)
+  #rtp.plotLine(*zip(*utils.pointsFromModel(method['R'].model)), index=1)
+  rtp.plotLine(*zip(*utils.pointsFromModel(z)), index=2)
   rtp.plotLine(*zip(*utils.pointsFromModel(x)), index=3)
   #rtp.plotDash(*zip(*utils.pointsFromModel(xpre)), index=0)
   rtp.update()
