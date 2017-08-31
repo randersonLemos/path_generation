@@ -175,14 +175,13 @@ class Kalman:
 
 
 class RealTimePlot(object):
-  def __init__(self, num_point_type, num_line_type, num_dash_type, save_images, nIterations, dir_name):
+  def __init__(self, num_point_type, num_line_type, num_dash_type, save_images, dir_name = None):
     self._num_point_type = num_point_type
     self._num_line_type = num_line_type
     self._num_dash_type = num_dash_type
     self._save_images = save_images
 
-    self._nIterations = nIterations
-    self._directory = dir_name 
+    self._directory = dir_name
     self._fig = plt.figure()
     self._count_fig = 0
 
